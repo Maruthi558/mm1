@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maruthi Music</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <!-- ───── Header ───── -->
+  <header>
+    <h1>🎵 Maruthi Music</h1>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Playlists</a>
+      <a href="#">Search</a>
+    </nav>
+  </header>
+
+  <!-- ───── Banner ───── -->
+  <section class="banner">
+    <h2>Feel the Music</h2>
+    <p>Stream your favorite songs now</p>
+  </section>
+
+  <!-- ───── Playlist ───── -->
+  <section class="playlist">
+    <h3>🔥 Popular Songs</h3>
+    <ul id="songList">
+      <li data-src="poyiraa Mama.mp3">🎶 Song 1 – poyiraa Mama</li>
+      <li data-src="Kubera Glimpse.mp3">🎶 Song 2 – Beats Forever</li>
+      <li data-src="Kollagottinadhiro.mp3">🎶 Song 3 – Relax Vibes</li>
+      <li data-src="song4.mp3">🎶 Song 4 – Relax Vibes</li>
+      <li data-src="song5.mp3">🎶 Song 5 – Relax Vibes</li>
+      <li data-src="song6.mp3">🎶 Song 6 – Relax Vibes</li>
+      
+    </ul>
+  </section>
+
+  <!-- ───── Sticky Player Bar ───── -->
+  <div class="player-bar">
+    <!-- transport -->
+    <button id="prev"><i class="fa fa-backward"></i></button>
+    <button id="play"><i class="fa fa-play"></i></button>
+    <button id="next"><i class="fa fa-forward"></i></button>
+
+    <!-- shuffle / repeat -->
+    <button id="shuffle" class="toggle"><i class="fa fa-random"></i></button>
+    <button id="repeat"  class="toggle"><i class="fa fa-redo"></i></button>
+
+    <!-- time + bar -->
+    <span id="currentTime">0:00</span>
+    <input type="range" id="progress" value="0" min="0" max="100">
+    <span id="duration">0:00</span>
+
+    <!-- volume -->
+    <i id="muteBtn" class="fa fa-volume-up"></i>
+    <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+
+    <!-- track title -->
+    <span id="nowPlaying">No song selected</span>
+
+    <!-- hidden audio element -->
+    <audio id="audio-player"></audio>
+  </div>
+
+  <!-- ───── Footer ───── -->
+  <footer>
+    <p>&copy; 2025 Maruthi Music. All rights reserved.</p>
+  </footer>
+
+  <!-- ───── Logic ───── -->
+  <script>
+    /* -------- DOM handles -------- */
+    const listItems   = [...document.querySelectorAll('#songList li')];
+    const audio       = document.getElementById('audio-player');
+    const playBtn     = document.getElementById('play');
+    const prevBtn     = document.getElementById('prev');
+    const nextBtn     = document.getElementById('next');
+    const shuffleBtn  = document.getElementById('shuffle');
+    const repeatBtn   = document.getElementById('repeat');
+    const progressBar = document.getElementById('progress');
+    const currentEl   = document.getElementById('currentTime');
+    const durationEl  = document.getElementById('duration');
+    const nowPlaying  = document.getElementById('nowPlaying');
+    const volumeBar   = document.getElementById('volume');
+    const muteBtn     = document.getElementById('muteBtn');
+
+    /* -------- state -------- */
+    let index = 0;
+    let isShuffle = false;
+    let isRepeat  = false;
+    let lastVolume = 1;
+
+    /* -------- helpers -------- */
+    const formatTime = secs =>
+      isNaN(secs) ? '0:00' :
+      `${Math.floor(secs/60)}:${String(Math.floor(secs%60)).padStart(2,'0')}`;
+
+    function loadTrack(i) {
+      const li = listItems[i];
+      if (!li) return;
+      audio.src = li.dataset.src;
+      nowPlaying.textContent = li.textContent.trim();
+    }
+
+    function updatePlayIcon(paused) {
+      playBtn.innerHTML = `<i class="fa fa-${paused ? 'play' : 'pause'}"></i>`;
+    }
+
+    function togglePlay() {
+      audio.paused ? audio.play() : audio.pause();
+    }
+
+    function playTrack(i) {
+      index = i;
+      loadTrack(index);
+      audio.play();
+    }
+
+    function nextTrack() {
+      if (isShuffle) {
+        index = Math.floor(Math.random() * listItems.length);
+      } else {
+        index = (index + 1) % listItems.length;
+      }
+      playTrack(index);
+    }
+
+    function prevTrack() {
+      index = (index - 1 + listItems.length) % listItems.length;
+      playTrack(index);
+    }
+
+    /* -------- event wiring -------- */
+    playBtn   .addEventListener('click', togglePlay);
+    prevBtn   .addEventListener('click', prevTrack);
+    nextBtn   .addEventListener('click', nextTrack);
+
+    shuffleBtn.addEventListener('click', () => {
+      isShuffle = !isShuffle;
+      shuffleBtn.classList.toggle('active', isShuffle);
+    });
+
+    repeatBtn .addEventListener('click', () => {
+      isRepeat = !isRepeat;
+      repeatBtn.classList.toggle('active', isRepeat);
+    });
+
+    /* click a song */
+    listItems.forEach((li, i) =>
+      li.addEventListener('click', () => playTrack(i))
+    );
+
+    /* --- audio events --- */
+    audio.addEventListener('loadedmetadata', () => {
+      progressBar.max = Math.floor(audio.duration);
+      durationEl.textContent = formatTime(audio.duration);
+    });
+
+    audio.addEventListener('timeupdate', () => {
+      progressBar.value = Math.floor(audio.currentTime);
+      currentEl.textContent = formatTime(audio.currentTime);
+    });
+
+    audio.addEventListener('ended', () => {
+      if (isRepeat) {
+        audio.currentTime = 0;
+        audio.play();
+      } else {
+        nextTrack();
+      }
+    });
+
+    audio.addEventListener('play',  () => updatePlayIcon(false));
+    audio.addEventListener('pause', () => updatePlayIcon(true));
+
+    /* --- scrub bar --- */
+    progressBar.addEventListener('input', () => {
+      audio.currentTime = progressBar.value;
+    });
+
+    /* --- volume --- */
+    volumeBar.addEventListener('input', () => {
+      audio.volume = volumeBar.value;
+      muteBtn.className = `fa ${audio.volume==0 ? 'fa-volume-mute' : 'fa-volume-up'}`;
+    });
+
+    muteBtn.addEventListener('click', () => {
+      if (audio.volume === 0) {
+        audio.volume = lastVolume || 1;
+        volumeBar.value = audio.volume;
+      } else {
+        lastVolume = audio.volume;
+        audio.volume = 0;
+        volumeBar.value = 0;
+      }
+      muteBtn.className = `fa ${audio.volume==0 ? 'fa-volume-mute' : 'fa-volume-up'}`;
+    });
+
+    /* init */
+    loadTrack(index);
+    updatePlayIcon(true);
+  </script>
+  <link rel="stylesheet" href="M.css">
+</body>
+</html>
